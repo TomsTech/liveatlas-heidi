@@ -15,20 +15,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: echo VITE_APP_VERSION=git-${GITHUB_SHA::6} > .env
       - run: cat .env
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
-          node-version: '18'
-      #- run: chmod +x .yarn/unplugged/esbuild-npm-0.14.54-b3dcd8a41e/node_modules/esbuild/lib/pnpapi-esbuild-linux-64-esbuild
+          node-version: '20'
       - run: yarn set version stable
-      - run: yarn install
+      - run: YARN_ENABLE_IMMUTABLE_INSTALLS=false yarn install
       - run: yarn build
       - run: find dist/live-atlas/assets -type f -iname \*.svg -delete
       - run: cp LICENSE.md dist
       - name: Upload a Build Artifact
-        uses: actions/upload-artifact@v3.1.0
+        uses: actions/upload-artifact@v4
         with:
           name: 'live-atlas'
           path: 'dist/'
