@@ -128,7 +128,7 @@ interface LiveAtlasUIConfig {
 	customLoginUrl: string | null;
 }
 
-export type LiveAtlasUIElement = 'layers' | 'chat' | LiveAtlasSidebarSection;
+export type LiveAtlasUIElement = 'layers' | 'chat' | 'coordinates' | LiveAtlasSidebarSection;
 export type LiveAtlasUIModal = 'login' | 'settings';
 export type LiveAtlasSidebarSection = 'servers' | 'players' | 'maps' | 'markers';
 export type LiveAtlasDimension = 'overworld' | 'nether' | 'end';
