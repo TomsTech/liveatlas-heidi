@@ -507,7 +507,7 @@ export default defineComponent({
 
 	.coordinate-panel {
 		position: fixed;
-		top: 10px;
+		top: 70px;  /* Below the existing map controls */
 		right: 10px;
 		background: rgba(0, 0, 0, 0.75);
 		border-radius: 8px;
