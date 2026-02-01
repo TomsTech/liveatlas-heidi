@@ -46,6 +46,14 @@
               @click="handleSectionClick" @keydown="handleSectionKeydown">
 				<SvgIcon name="players"></SvgIcon>
 			</button>
+			<button ref="coordinates-button" type="button"
+              class="button--coordinates"
+              :title="coordinatePanelVisible ? 'Hide coordinates' : 'Go to coordinates'"
+              :aria-label="coordinatePanelVisible ? 'Hide coordinates' : 'Go to coordinates'"
+              :aria-expanded="coordinatePanelVisible"
+              @click="toggleCoordinatePanel">
+				<SvgIcon name="crosshair"></SvgIcon>
+			</button>
 		</header>
 		<div class="sidebar__content" @keydown="handleSidebarKeydown">
 			<ServersSection v-if="serverCount > 1" :hidden="!mapsVisible"></ServersSection>
@@ -77,6 +85,7 @@ import "@/assets/icons/marker_point.svg";
 import "@/assets/icons/day.svg";
 import "@/assets/icons/night.svg";
 import "@/assets/icons/night_day.svg";
+import "@/assets/icons/crosshair.svg";
 
 export default defineComponent({
 	components: {
@@ -121,7 +130,9 @@ export default defineComponent({
 				//Show following alongside playerlist on small screens
 				return (!smallScreen.value && following.value)
 					|| (smallScreen.value && playersVisible.value);
-			});
+			}),
+
+			coordinatePanelVisible = computed(() => currentlyVisible.value.has('coordinates'));
 
 		//Arrow key section navigation
 		const handleSidebarKeydown = (e: KeyboardEvent) => {
@@ -166,6 +177,10 @@ export default defineComponent({
 			store.state.components.nightDay.mode = nextMode;
 		}
 
+		const toggleCoordinatePanel = () => {
+			store.commit(MutationTypes.TOGGLE_UI_ELEMENT_VISIBILITY, 'coordinates');
+		}
+
 		//Move focus when sidebar sections become visible
 		const focusSection = (section: LiveAtlasSidebarSection) => focus(`[data-section=${section}] .section__heading button`);
 
@@ -203,7 +218,9 @@ export default defineComponent({
 			handleSidebarKeydown,
 			handleSectionKeydown,
 			handleSectionClick,
-			handleNightDayClick
+			handleNightDayClick,
+			toggleCoordinatePanel,
+			coordinatePanelVisible
 		}
 	},
 });

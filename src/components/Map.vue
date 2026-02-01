@@ -35,23 +35,8 @@
 
 	<MapContextMenu v-if="contextMenuEnabled && leaflet" :leaflet="leaflet"></MapContextMenu>
 
-	<!-- Coordinate Input Control - styled like other Leaflet controls -->
-	<div class="leaflet-control-container coordinate-control-wrapper" v-if="leaflet">
-		<div class="leaflet-top leaflet-right coordinate-control-position">
-			<div class="leaflet-control leaflet-bar coordinate-control">
-				<button
-					class="leaflet-control-button coordinate-toggle"
-					@click="coordinatePanelCollapsed = !coordinatePanelCollapsed"
-					:title="coordinatePanelCollapsed ? 'Go to coordinates' : 'Hide coordinate panel'"
-					:aria-expanded="!coordinatePanelCollapsed"
-				>
-					<svg class="svg-icon" aria-hidden="true">
-						<use xlink:href="#icon--marker_point" />
-					</svg>
-				</button>
-			</div>
-
-			<div class="leaflet-control coordinate-panel" v-show="!coordinatePanelCollapsed">
+	<!-- Coordinate Input Panel - toggle controlled from Sidebar -->
+	<div class="coordinate-panel" v-if="leaflet && coordinatePanelVisible">
 				<div class="coordinate-input">
 					<label>X: <input type="number" v-model.number="inputX" /></label>
 					<label>Y: <input type="number" v-model.number="inputY" /></label>
@@ -72,8 +57,6 @@
 						<button @click="removeWaypoint(index)" title="Remove waypoint" class="remove">×</button>
 					</div>
 				</div>
-			</div>
-		</div>
 	</div>
 </template>
 
@@ -96,7 +79,6 @@ import {LoadingControl} from "@/leaflet/control/LoadingControl";
 import MapContextMenu from "@/components/map/MapContextMenu.vue";
 import LoginControl from "@/components/map/control/LoginControl.vue";
 import TileLayerOverlay from "@/components/map/layer/TileLayerOverlay.vue";
-import '@/assets/icons/marker_point.svg';
 
 export default defineComponent({
 	components: {
@@ -125,7 +107,9 @@ export default defineComponent({
 			// Waypoint management
 			newWaypointName = ref(""),
 			waypoints = ref<{name: string; location: LiveAtlasLocation}[]>([]),
-			coordinatePanelCollapsed = ref(false),
+
+			// Coordinate panel visibility from store
+			coordinatePanelVisible = computed(() => store.state.ui.visibleElements.has('coordinates')),
 
 			maps = computed(() => store.state.maps),
 			overlays = computed(() => store.state.currentMap?.overlays),
@@ -190,7 +174,7 @@ export default defineComponent({
 			// Waypoints
 			newWaypointName,
 			waypoints,
-			coordinatePanelCollapsed
+			coordinatePanelVisible
 		}
 	},
 
@@ -525,49 +509,18 @@ export default defineComponent({
 		}
 	}
 
-	/* Position the coordinate control below the existing top-right controls */
-	.coordinate-control-wrapper {
-		position: fixed;
-		top: 0;
-		right: 0;
-		pointer-events: none;
-		z-index: 1000;
-
-		.coordinate-control-position {
-			position: absolute;
-			top: calc(var(--ui-element-spacing, 10px) + var(--ui-button-size, 50px) * 3 + var(--ui-element-spacing, 10px) * 3);
-			right: var(--ui-element-spacing, 10px);
-			display: flex;
-			flex-direction: column;
-			align-items: flex-end;
-			gap: var(--ui-element-spacing, 10px);
-			pointer-events: auto;
-		}
-
-		.coordinate-control {
-			/* Uses .leaflet-control and .leaflet-bar styles from the global CSS */
-		}
-
-		.coordinate-toggle {
-			/* Uses .leaflet-control-button styles from the global CSS */
-			display: flex;
-			align-items: center;
-			justify-content: center;
-
-			.svg-icon {
-				width: 2.4rem;
-				height: 2.4rem;
-			}
-		}
-	}
-
+	/* Coordinate panel positioned below the sidebar buttons */
 	.coordinate-panel {
-		/* Style like leaflet-control-layers-list */
+		position: fixed;
+		top: calc(var(--ui-element-spacing, 10px) + var(--ui-button-size, 50px) + var(--ui-element-spacing, 10px));
+		right: var(--ui-element-spacing, 10px);
+		z-index: 100;
 		background-color: var(--background-base);
 		border-radius: var(--border-radius);
 		box-shadow: var(--box-shadow);
 		padding: 1.2rem;
 		min-width: 200px;
+		max-width: 26rem;
 		color: var(--text-base);
 
 		.coordinate-input {
