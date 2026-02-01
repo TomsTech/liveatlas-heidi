@@ -36,25 +36,31 @@
 	<MapContextMenu v-if="contextMenuEnabled && leaflet" :leaflet="leaflet"></MapContextMenu>
 
 	<!-- Coordinate Input Panel -->
-	<div class="coordinate-panel" v-if="leaflet">
-		<div class="coordinate-input">
-			<label>X: <input type="number" v-model.number="inputX" /></label>
-			<label>Y: <input type="number" v-model.number="inputY" /></label>
-			<label>Z: <input type="number" v-model.number="inputZ" /></label>
-			<button @click="goToCoordinates" title="Go to coordinates">Go</button>
-		</div>
+	<div class="coordinate-panel" :class="{ collapsed: coordinatePanelCollapsed }" v-if="leaflet">
+		<button class="panel-toggle" @click="coordinatePanelCollapsed = !coordinatePanelCollapsed" :title="coordinatePanelCollapsed ? 'Show coordinates' : 'Hide coordinates'">
+			<span class="toggle-icon">{{ coordinatePanelCollapsed ? '📍' : '−' }}</span>
+		</button>
 
-		<div class="waypoint-input">
-			<input type="text" v-model="newWaypointName" placeholder="Waypoint name" @keyup.enter="addWaypoint" />
-			<button @click="addWaypoint" title="Save current location as waypoint">Save</button>
-		</div>
+		<div class="panel-content" v-show="!coordinatePanelCollapsed">
+			<div class="coordinate-input">
+				<label>X: <input type="number" v-model.number="inputX" /></label>
+				<label>Y: <input type="number" v-model.number="inputY" /></label>
+				<label>Z: <input type="number" v-model.number="inputZ" /></label>
+				<button @click="goToCoordinates" title="Go to coordinates">Go</button>
+			</div>
 
-		<div class="waypoints-list" v-if="waypoints.length > 0">
-			<div v-for="(wp, index) in waypoints" :key="wp.name" class="waypoint-item">
-				<span class="waypoint-name">{{ wp.name }}</span>
-				<span class="waypoint-coords">({{ Math.round(wp.location.x) }}, {{ Math.round(wp.location.z) }})</span>
-				<button @click="goToWaypoint(wp)" title="Go to waypoint">↗</button>
-				<button @click="removeWaypoint(index)" title="Remove waypoint" class="remove">×</button>
+			<div class="waypoint-input">
+				<input type="text" v-model="newWaypointName" placeholder="Waypoint name" @keyup.enter="addWaypoint" />
+				<button @click="addWaypoint" title="Save current location as waypoint">Save</button>
+			</div>
+
+			<div class="waypoints-list" v-if="waypoints.length > 0">
+				<div v-for="(wp, index) in waypoints" :key="wp.name" class="waypoint-item">
+					<span class="waypoint-name">{{ wp.name }}</span>
+					<span class="waypoint-coords">({{ Math.round(wp.location.x) }}, {{ Math.round(wp.location.z) }})</span>
+					<button @click="goToWaypoint(wp)" title="Go to waypoint">↗</button>
+					<button @click="removeWaypoint(index)" title="Remove waypoint" class="remove">×</button>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -107,6 +113,7 @@ export default defineComponent({
 			// Waypoint management
 			newWaypointName = ref(""),
 			waypoints = ref<{name: string; location: LiveAtlasLocation}[]>([]),
+			coordinatePanelCollapsed = ref(false),
 
 			maps = computed(() => store.state.maps),
 			overlays = computed(() => store.state.currentMap?.overlays),
@@ -170,7 +177,8 @@ export default defineComponent({
 
 			// Waypoints
 			newWaypointName,
-			waypoints
+			waypoints,
+			coordinatePanelCollapsed
 		}
 	},
 
@@ -515,6 +523,47 @@ export default defineComponent({
 		z-index: 1000;
 		font-size: 13px;
 		color: #fff;
+		transition: all 0.2s ease;
+
+		&.collapsed {
+			padding: 0;
+			background: transparent;
+
+			.panel-toggle {
+				background: rgba(0, 0, 0, 0.75);
+				border-radius: 8px;
+			}
+		}
+
+		.panel-toggle {
+			position: absolute;
+			top: 0;
+			right: 0;
+			width: 32px;
+			height: 32px;
+			border: none;
+			background: transparent;
+			color: #fff;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 16px;
+			border-radius: 4px;
+			transition: background 0.2s;
+
+			&:hover {
+				background: rgba(255, 255, 255, 0.15);
+			}
+
+			.toggle-icon {
+				line-height: 1;
+			}
+		}
+
+		.panel-content {
+			padding-top: 24px;
+		}
 		backdrop-filter: blur(4px);
 		min-width: 200px;
 
