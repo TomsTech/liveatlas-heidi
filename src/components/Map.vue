@@ -34,10 +34,34 @@
 	</div>
 
 	<MapContextMenu v-if="contextMenuEnabled && leaflet" :leaflet="leaflet"></MapContextMenu>
+
+	<!-- Coordinate Input Panel -->
+	<div class="coordinate-panel" v-if="leaflet">
+		<div class="coordinate-input">
+			<label>X: <input type="number" v-model.number="inputX" /></label>
+			<label>Y: <input type="number" v-model.number="inputY" /></label>
+			<label>Z: <input type="number" v-model.number="inputZ" /></label>
+			<button @click="goToCoordinates" title="Go to coordinates">Go</button>
+		</div>
+
+		<div class="waypoint-input">
+			<input type="text" v-model="newWaypointName" placeholder="Waypoint name" @keyup.enter="addWaypoint" />
+			<button @click="addWaypoint" title="Save current location as waypoint">Save</button>
+		</div>
+
+		<div class="waypoints-list" v-if="waypoints.length > 0">
+			<div v-for="(wp, index) in waypoints" :key="wp.name" class="waypoint-item">
+				<span class="waypoint-name">{{ wp.name }}</span>
+				<span class="waypoint-coords">({{ Math.round(wp.location.x) }}, {{ Math.round(wp.location.z) }})</span>
+				<button @click="goToWaypoint(wp)" title="Go to waypoint">↗</button>
+				<button @click="removeWaypoint(index)" title="Remove waypoint" class="remove">×</button>
+			</div>
+		</div>
+	</div>
 </template>
 
 <script lang="ts">
-import {computed, ref, defineComponent} from "vue";
+import {computed, ref, defineComponent, onMounted} from "vue";
 import {CRS, LatLng, LatLngBounds, PanOptions, ZoomPanOptions} from 'leaflet';
 import {LiveAtlasLocation, LiveAtlasPlayer, LiveAtlasMapViewTarget} from "@/index";
 import {useStore} from '@/store';
@@ -74,6 +98,15 @@ export default defineComponent({
 	setup() {
 		const store = useStore(),
 			leaflet = undefined as any,
+
+			// Coordinate input refs
+			inputX = ref(0),
+			inputY = ref(64),
+			inputZ = ref(0),
+
+			// Waypoint management
+			newWaypointName = ref(""),
+			waypoints = ref<{name: string; location: LiveAtlasLocation}[]>([]),
 
 			maps = computed(() => store.state.maps),
 			overlays = computed(() => store.state.currentMap?.overlays),
@@ -128,7 +161,16 @@ export default defineComponent({
 
 			scheduledView,
 
-			mapTitle
+			mapTitle,
+
+			// Coordinate input
+			inputX,
+			inputY,
+			inputZ,
+
+			// Waypoints
+			newWaypointName,
+			waypoints
 		}
 	},
 
@@ -248,6 +290,9 @@ export default defineComponent({
 	},
 
 	mounted() {
+		// Load saved waypoints
+		this.loadWaypoints();
+
 		this.leaflet = new LiveAtlasLeafletMap(this.$el.nextElementSibling, Object.freeze({
 			zoom: this.configuration.defaultZoom,
 			center: new LatLng(0, 0),
@@ -360,6 +405,69 @@ export default defineComponent({
 				map,
 				zoom: (newFollow) ? store.state.configuration.followZoom : undefined,
 			});
+		},
+
+		// Coordinate input - navigate to specific coordinates
+		goToCoordinates() {
+			if (!this.currentMap || !this.leaflet) return;
+
+			this.setView({
+				location: {
+					x: this.inputX,
+					y: this.inputY,
+					z: this.inputZ
+				} as LiveAtlasLocation
+			});
+		},
+
+		// Waypoint management - save waypoints to localStorage
+		loadWaypoints() {
+			const saved = localStorage.getItem("liveatlas-waypoints");
+			if (saved) {
+				try {
+					this.waypoints = JSON.parse(saved);
+				} catch (e) {
+					console.warn("Failed to load waypoints:", e);
+				}
+			}
+		},
+
+		saveWaypoints() {
+			localStorage.setItem("liveatlas-waypoints", JSON.stringify(this.waypoints));
+		},
+
+		addWaypoint() {
+			if (!this.newWaypointName.trim()) return;
+			if (!this.currentMap || !this.leaflet) return;
+
+			// Check for duplicate names
+			const exists = this.waypoints.some(
+				(wp: {name: string}) => wp.name.toLowerCase() === this.newWaypointName.toLowerCase()
+			);
+			if (exists) {
+				alert("A waypoint with this name already exists");
+				return;
+			}
+
+			// Get current location from map center
+			const location = this.currentMap.latLngToLocation(this.leaflet.getCenter(), 64) as LiveAtlasLocation;
+
+			this.waypoints.push({
+				name: this.newWaypointName.trim(),
+				location
+			});
+			this.newWaypointName = "";
+			this.saveWaypoints();
+		},
+
+		goToWaypoint(wp: {name: string; location: LiveAtlasLocation}) {
+			if (!this.currentMap || !this.leaflet) return;
+			this.setView({ location: wp.location });
+		},
+
+		removeWaypoint(index: number) {
+			this.waypoints.splice(index, 1);
+			this.saveWaypoints();
 		}
 	}
 })
@@ -393,6 +501,136 @@ export default defineComponent({
 		@include focus-reset {
 			&:before {
 				content: none;
+			}
+		}
+	}
+
+	.coordinate-panel {
+		position: fixed;
+		top: 10px;
+		right: 10px;
+		background: rgba(0, 0, 0, 0.75);
+		border-radius: 8px;
+		padding: 12px;
+		z-index: 1000;
+		font-size: 13px;
+		color: #fff;
+		backdrop-filter: blur(4px);
+		min-width: 200px;
+
+		.coordinate-input {
+			display: flex;
+			gap: 8px;
+			align-items: center;
+			flex-wrap: wrap;
+			margin-bottom: 8px;
+
+			label {
+				display: flex;
+				align-items: center;
+				gap: 4px;
+			}
+
+			input[type="number"] {
+				width: 60px;
+				padding: 4px 6px;
+				border: 1px solid rgba(255, 255, 255, 0.3);
+				border-radius: 4px;
+				background: rgba(255, 255, 255, 0.1);
+				color: #fff;
+				font-size: 12px;
+
+				&:focus {
+					outline: none;
+					border-color: var(--outline-focus, #4a90d9);
+				}
+			}
+		}
+
+		.waypoint-input {
+			display: flex;
+			gap: 6px;
+			margin-bottom: 8px;
+
+			input[type="text"] {
+				flex: 1;
+				padding: 6px 8px;
+				border: 1px solid rgba(255, 255, 255, 0.3);
+				border-radius: 4px;
+				background: rgba(255, 255, 255, 0.1);
+				color: #fff;
+				font-size: 12px;
+
+				&::placeholder {
+					color: rgba(255, 255, 255, 0.5);
+				}
+
+				&:focus {
+					outline: none;
+					border-color: var(--outline-focus, #4a90d9);
+				}
+			}
+		}
+
+		button {
+			padding: 4px 10px;
+			border: 1px solid rgba(255, 255, 255, 0.3);
+			border-radius: 4px;
+			background: rgba(255, 255, 255, 0.15);
+			color: #fff;
+			cursor: pointer;
+			font-size: 12px;
+			transition: background 0.2s;
+
+			&:hover {
+				background: rgba(255, 255, 255, 0.25);
+			}
+
+			&:active {
+				background: rgba(255, 255, 255, 0.35);
+			}
+		}
+
+		.waypoints-list {
+			border-top: 1px solid rgba(255, 255, 255, 0.2);
+			padding-top: 8px;
+			max-height: 200px;
+			overflow-y: auto;
+
+			.waypoint-item {
+				display: flex;
+				align-items: center;
+				gap: 6px;
+				padding: 4px 0;
+
+				&:not(:last-child) {
+					border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+				}
+
+				.waypoint-name {
+					flex: 1;
+					font-weight: 500;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					white-space: nowrap;
+				}
+
+				.waypoint-coords {
+					font-size: 11px;
+					color: rgba(255, 255, 255, 0.6);
+				}
+
+				button {
+					padding: 2px 6px;
+					min-width: 24px;
+
+					&.remove {
+						color: #ff6b6b;
+						&:hover {
+							background: rgba(255, 107, 107, 0.2);
+						}
+					}
+				}
 			}
 		}
 	}
