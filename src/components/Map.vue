@@ -35,31 +35,42 @@
 
 	<MapContextMenu v-if="contextMenuEnabled && leaflet" :leaflet="leaflet"></MapContextMenu>
 
-	<!-- Coordinate Input Panel -->
-	<div class="coordinate-panel" :class="{ collapsed: coordinatePanelCollapsed }" v-if="leaflet">
-		<button class="panel-toggle" @click="coordinatePanelCollapsed = !coordinatePanelCollapsed" :title="coordinatePanelCollapsed ? 'Show coordinates' : 'Hide coordinates'">
-			<span class="toggle-icon">{{ coordinatePanelCollapsed ? '📍' : '−' }}</span>
-		</button>
-
-		<div class="panel-content" v-show="!coordinatePanelCollapsed">
-			<div class="coordinate-input">
-				<label>X: <input type="number" v-model.number="inputX" /></label>
-				<label>Y: <input type="number" v-model.number="inputY" /></label>
-				<label>Z: <input type="number" v-model.number="inputZ" /></label>
-				<button @click="goToCoordinates" title="Go to coordinates">Go</button>
+	<!-- Coordinate Input Control - styled like other Leaflet controls -->
+	<div class="leaflet-control-container coordinate-control-wrapper" v-if="leaflet">
+		<div class="leaflet-top leaflet-right coordinate-control-position">
+			<div class="leaflet-control leaflet-bar coordinate-control">
+				<button
+					class="leaflet-control-button coordinate-toggle"
+					@click="coordinatePanelCollapsed = !coordinatePanelCollapsed"
+					:title="coordinatePanelCollapsed ? 'Go to coordinates' : 'Hide coordinate panel'"
+					:aria-expanded="!coordinatePanelCollapsed"
+				>
+					<svg class="svg-icon" aria-hidden="true">
+						<use xlink:href="#icon--marker_point" />
+					</svg>
+				</button>
 			</div>
 
-			<div class="waypoint-input">
-				<input type="text" v-model="newWaypointName" placeholder="Waypoint name" @keyup.enter="addWaypoint" />
-				<button @click="addWaypoint" title="Save current location as waypoint">Save</button>
-			</div>
+			<div class="leaflet-control coordinate-panel" v-show="!coordinatePanelCollapsed">
+				<div class="coordinate-input">
+					<label>X: <input type="number" v-model.number="inputX" /></label>
+					<label>Y: <input type="number" v-model.number="inputY" /></label>
+					<label>Z: <input type="number" v-model.number="inputZ" /></label>
+					<button @click="goToCoordinates" title="Go to coordinates">Go</button>
+				</div>
 
-			<div class="waypoints-list" v-if="waypoints.length > 0">
-				<div v-for="(wp, index) in waypoints" :key="wp.name" class="waypoint-item">
-					<span class="waypoint-name">{{ wp.name }}</span>
-					<span class="waypoint-coords">({{ Math.round(wp.location.x) }}, {{ Math.round(wp.location.z) }})</span>
-					<button @click="goToWaypoint(wp)" title="Go to waypoint">↗</button>
-					<button @click="removeWaypoint(index)" title="Remove waypoint" class="remove">×</button>
+				<div class="waypoint-input">
+					<input type="text" v-model="newWaypointName" placeholder="Waypoint name" @keyup.enter="addWaypoint" />
+					<button @click="addWaypoint" title="Save current location as waypoint">Save</button>
+				</div>
+
+				<div class="waypoints-list" v-if="waypoints.length > 0">
+					<div v-for="(wp, index) in waypoints" :key="wp.name" class="waypoint-item">
+						<span class="waypoint-name">{{ wp.name }}</span>
+						<span class="waypoint-coords">({{ Math.round(wp.location.x) }}, {{ Math.round(wp.location.z) }})</span>
+						<button @click="goToWaypoint(wp)" title="Go to waypoint">↗</button>
+						<button @click="removeWaypoint(index)" title="Remove waypoint" class="remove">×</button>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -85,6 +96,7 @@ import {LoadingControl} from "@/leaflet/control/LoadingControl";
 import MapContextMenu from "@/components/map/MapContextMenu.vue";
 import LoginControl from "@/components/map/control/LoginControl.vue";
 import TileLayerOverlay from "@/components/map/layer/TileLayerOverlay.vue";
+import '@/assets/icons/marker_point.svg';
 
 export default defineComponent({
 	components: {
@@ -513,147 +525,126 @@ export default defineComponent({
 		}
 	}
 
-	.coordinate-panel {
+	/* Position the coordinate control below the existing top-right controls */
+	.coordinate-control-wrapper {
 		position: fixed;
-		top: 70px;  /* Below the existing map controls */
-		right: 10px;
-		background: rgba(0, 0, 0, 0.75);
-		border-radius: 8px;
-		padding: 12px;
+		top: 0;
+		right: 0;
+		pointer-events: none;
 		z-index: 1000;
-		font-size: 13px;
-		color: #fff;
-		transition: all 0.2s ease;
 
-		&.collapsed {
-			padding: 0;
-			background: transparent;
-
-			.panel-toggle {
-				background: rgba(0, 0, 0, 0.75);
-				border-radius: 8px;
-			}
+		.coordinate-control-position {
+			position: absolute;
+			top: calc(var(--ui-element-spacing, 10px) + var(--ui-button-size, 50px) * 3 + var(--ui-element-spacing, 10px) * 3);
+			right: var(--ui-element-spacing, 10px);
+			display: flex;
+			flex-direction: column;
+			align-items: flex-end;
+			gap: var(--ui-element-spacing, 10px);
+			pointer-events: auto;
 		}
 
-		.panel-toggle {
-			position: absolute;
-			top: 0;
-			right: 0;
-			width: 32px;
-			height: 32px;
-			border: none;
-			background: transparent;
-			color: #fff;
-			cursor: pointer;
+		.coordinate-control {
+			/* Uses .leaflet-control and .leaflet-bar styles from the global CSS */
+		}
+
+		.coordinate-toggle {
+			/* Uses .leaflet-control-button styles from the global CSS */
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			font-size: 16px;
-			border-radius: 4px;
-			transition: background 0.2s;
 
-			&:hover {
-				background: rgba(255, 255, 255, 0.15);
-			}
-
-			.toggle-icon {
-				line-height: 1;
+			.svg-icon {
+				width: 2.4rem;
+				height: 2.4rem;
 			}
 		}
+	}
 
-		.panel-content {
-			padding-top: 24px;
-		}
-		backdrop-filter: blur(4px);
+	.coordinate-panel {
+		/* Style like leaflet-control-layers-list */
+		background-color: var(--background-base);
+		border-radius: var(--border-radius);
+		box-shadow: var(--box-shadow);
+		padding: 1.2rem;
 		min-width: 200px;
+		color: var(--text-base);
 
 		.coordinate-input {
 			display: flex;
-			gap: 8px;
+			gap: 0.8rem;
 			align-items: center;
 			flex-wrap: wrap;
-			margin-bottom: 8px;
+			margin-bottom: 0.8rem;
 
 			label {
 				display: flex;
 				align-items: center;
-				gap: 4px;
+				gap: 0.4rem;
+				font-size: 1.3rem;
 			}
 
 			input[type="number"] {
-				width: 60px;
-				padding: 4px 6px;
-				border: 1px solid rgba(255, 255, 255, 0.3);
-				border-radius: 4px;
-				background: rgba(255, 255, 255, 0.1);
-				color: #fff;
-				font-size: 12px;
+				width: 6rem;
+				padding: 0.4rem 0.6rem;
+				border: 0.1rem solid var(--border-color);
+				border-radius: var(--border-radius);
+				background: var(--background-light);
+				color: var(--text-base);
+				font-size: 1.2rem;
 
 				&:focus {
 					outline: none;
-					border-color: var(--outline-focus, #4a90d9);
+					border-color: var(--outline-focus);
 				}
 			}
 		}
 
 		.waypoint-input {
 			display: flex;
-			gap: 6px;
-			margin-bottom: 8px;
+			gap: 0.6rem;
+			margin-bottom: 0.8rem;
 
 			input[type="text"] {
 				flex: 1;
-				padding: 6px 8px;
-				border: 1px solid rgba(255, 255, 255, 0.3);
-				border-radius: 4px;
-				background: rgba(255, 255, 255, 0.1);
-				color: #fff;
-				font-size: 12px;
+				padding: 0.6rem 0.8rem;
+				border: 0.1rem solid var(--border-color);
+				border-radius: var(--border-radius);
+				background: var(--background-light);
+				color: var(--text-base);
+				font-size: 1.2rem;
 
 				&::placeholder {
-					color: rgba(255, 255, 255, 0.5);
+					color: var(--text-subtle);
 				}
 
 				&:focus {
 					outline: none;
-					border-color: var(--outline-focus, #4a90d9);
+					border-color: var(--outline-focus);
 				}
 			}
 		}
 
-		button {
-			padding: 4px 10px;
-			border: 1px solid rgba(255, 255, 255, 0.3);
-			border-radius: 4px;
-			background: rgba(255, 255, 255, 0.15);
-			color: #fff;
-			cursor: pointer;
-			font-size: 12px;
-			transition: background 0.2s;
-
-			&:hover {
-				background: rgba(255, 255, 255, 0.25);
-			}
-
-			&:active {
-				background: rgba(255, 255, 255, 0.35);
-			}
+		button:not(.coordinate-toggle) {
+			@include button;
+			padding: 0.4rem 1rem;
+			font-size: 1.2rem;
 		}
 
 		.waypoints-list {
-			border-top: 1px solid rgba(255, 255, 255, 0.2);
-			padding-top: 8px;
-			max-height: 200px;
+			border-top: 0.1rem solid var(--border-color);
+			padding-top: 0.8rem;
+			max-height: 20rem;
 			overflow-y: auto;
 
 			.waypoint-item {
 				display: flex;
 				align-items: center;
-				gap: 6px;
-				padding: 4px 0;
+				gap: 0.6rem;
+				padding: 0.4rem 0;
 
 				&:not(:last-child) {
-					border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+					border-bottom: 0.1rem solid var(--border-color);
 				}
 
 				.waypoint-name {
@@ -662,19 +653,20 @@ export default defineComponent({
 					overflow: hidden;
 					text-overflow: ellipsis;
 					white-space: nowrap;
+					font-size: 1.3rem;
 				}
 
 				.waypoint-coords {
-					font-size: 11px;
-					color: rgba(255, 255, 255, 0.6);
+					font-size: 1.1rem;
+					color: var(--text-subtle);
 				}
 
 				button {
-					padding: 2px 6px;
-					min-width: 24px;
+					padding: 0.2rem 0.6rem;
+					min-width: 2.4rem;
 
 					&.remove {
-						color: #ff6b6b;
+						color: var(--text-danger, #ff6b6b);
 						&:hover {
 							background: rgba(255, 107, 107, 0.2);
 						}
